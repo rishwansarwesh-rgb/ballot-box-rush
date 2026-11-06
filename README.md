@@ -15,6 +15,7 @@ Open `index.html` in a browser. Everything is in that one file.
 - Portals to Mega Lobbyist boss fights with a rage phase, 3 hearts for Boxy, and arena power-ups that give the sidekick special attacks
 - Power-ups, rally meter, one revive per boss win
 - A tiny sidekick (blond quiff, blue suit) who walks and jumps along behind Boxy
+- Shop with Boxy skins (trail effects) and 8 sidekicks: Mr. Quiff, The Mayor, The Minister, The Activist, The Speaker, Campaign Boss, Robo Candidate, Floating Voter
 - Skin shop with trail effects, daily challenges, best scores, sound and music
 
 Progress (wallet, skins, records) is saved in your browser only.
