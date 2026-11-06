@@ -18,4 +18,4 @@ Open `index.html` in a browser. Everything is in that one file.
 - Shop with Boxy skins (trail effects) and 8 sidekicks: Mr. Quiff, The Mayor, The Minister, The Activist, The Speaker, Campaign Boss, Robo Candidate, Floating Voter
 - Skin shop with trail effects, daily challenges, best scores, sound and music
 
-Progress (wallet, skins, records) is saved in your browser only.
+Progress (wallet, skins, sidekicks, records) is saved in your browser. Use **SAVE CODE** in the menu to copy it to another phone or browser.

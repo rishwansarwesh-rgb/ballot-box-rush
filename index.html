@@ -43,6 +43,8 @@ button.alt{background:var(--panel2);border-bottom-color:#070a1a}
 button:disabled{opacity:.45;cursor:default}
 button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .shop{justify-content:flex-start;overflow-y:auto}
+#saveCode{width:100%;max-width:320px;font:11px/1.4 ui-monospace,monospace;background:var(--panel);color:var(--ink);border:2px solid var(--panel2);border-radius:8px;padding:8px;resize:none;word-break:break-all;user-select:text;-webkit-user-select:text}
+.savemsg{min-height:1.5em;color:var(--gold);font-size:13px}
 .shop h2.sub{font-size:13px;margin:14px 0 2px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:340px}
 .skin{background:var(--panel);border:2px solid transparent;border-radius:10px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -93,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 11 · S.C. PAYS</div>
+    <div class="ver">VERSION 12 · SAVE CODE</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -103,6 +105,14 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <h2 class="sub">SIDEKICKS</h2>
     <div class="grid" id="pets"></div>
     <button class="alt" id="closeShop">BACK</button>
+  </div>
+  <div class="overlay" id="saveEl" hidden>
+    <h2>SAVE CODE</h2>
+    <p>Copy this code and keep it somewhere safe (notes, WhatsApp to yourself). On another phone or browser, paste it here and tap LOAD.</p>
+    <textarea id="saveCode" rows="5" spellcheck="false" aria-label="Save code"></textarea>
+    <div class="row"><button id="copyCode">COPY</button><button id="loadCode" class="alt">LOAD</button></div>
+    <p id="saveMsg" class="savemsg"></p>
+    <button class="alt" id="closeSave">BACK</button>
   </div>
 </div>
 <div class="pad">
@@ -493,7 +503,7 @@ function gameOver(){
   const bonus=votes*2;wallet+=dollars+bonus;store.set('wallet',wallet);
   const rec=store.get('bestZone',1),z=run.zone;if(z>rec)store.set('bestZone',z);
   const recCash=store.get('bestCash',0);if(run.cash>recCash)store.set('bestCash',run.cash);
-  showOv('Campaign over',`You reached zone ${z}${z>rec?' (new record!)':''}. ${bossCount} boss${bossCount==1?'':'es'} beaten · $${dollars} cash. Election result: ${votes} votes = $${bonus} bonus.`,[['PLAY AGAIN',startGame],['SHOP',openShop,'alt']],true);
+  showOv('Campaign over',`You reached zone ${z}${z>rec?' (new record!)':''}. ${bossCount} boss${bossCount==1?'':'es'} beaten · $${dollars} cash. Election result: ${votes} votes = $${bonus} bonus.`,[['PLAY AGAIN',startGame],['SHOP',openShop,'alt'],['SAVE CODE',openSave,'alt']],true);
   hud();
 }
 function pop(x,y,t){popups.push({x,y,t:1,txt:t});}
@@ -1056,9 +1066,29 @@ function hideStick(){}
 cv.addEventListener('pointerdown',e=>{if(state!='play'&&state!='boss')return;e.preventDefault();screenTouches++;if(state=='boss')keys.fire=true;else keys.jump=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}});
 const cvUp=()=>{screenTouches=Math.max(0,screenTouches-1);if(!screenTouches){keys.jump=false;keys.fire=false;}};
 cv.addEventListener('pointerup',cvUp);cv.addEventListener('pointercancel',cvUp);
+/* ---------- save code: move your progress to another phone or browser ---------- */
+const saveEl=document.getElementById('saveEl'),saveTa=document.getElementById('saveCode'),saveMsg=document.getElementById('saveMsg');
+function makeSaveCode(){const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('bbr_'))o[k]=localStorage.getItem(k);}
+  const j=JSON.stringify(o);let h=0;for(const ch of j)h=(h*31+ch.charCodeAt(0))>>>0;
+  return 'BBR1-'+btoa(unescape(encodeURIComponent(j)))+'-'+h.toString(36);}
+function readSaveCode(code){const m=code.replace(/\s+/g,'').match(/^BBR1-([A-Za-z0-9+/=]+)-([a-z0-9]+)$/);if(!m)return null;
+  try{const j=decodeURIComponent(escape(atob(m[1])));let h=0;for(const ch of j)h=(h*31+ch.charCodeAt(0))>>>0;if(h.toString(36)!==m[2])return null;
+    const o=JSON.parse(j);return o&&typeof o=='object'?o:null;}catch(e){return null;}}
+function openSave(){audioOn();try{saveTa.value=makeSaveCode();}catch(e){saveTa.value='';}saveMsg.textContent='';ov.hidden=true;saveEl.hidden=false;}
+document.getElementById('copyCode').onclick=async()=>{saveTa.value=makeSaveCode();
+  try{await navigator.clipboard.writeText(saveTa.value);saveMsg.textContent='Copied!';}
+  catch(e){saveTa.focus();saveTa.select();saveMsg.textContent='Select the code and copy it.';}};
+document.getElementById('loadCode').onclick=()=>{const o=readSaveCode(saveTa.value);
+  if(!o){saveMsg.textContent='That code is not valid. Check you pasted all of it.';return;}
+  if(!confirm('Load this save? Your progress on this device will be replaced.'))return;
+  try{for(const k of Object.keys(localStorage))if(k.startsWith('bbr_'))localStorage.removeItem(k);
+    for(const [k,v] of Object.entries(o))if(k.startsWith('bbr_')&&typeof v=='string')localStorage.setItem(k,v);}
+  catch(e){saveMsg.textContent='Could not save on this browser (private mode?).';return;}
+  saveMsg.textContent='Loaded! Restarting...';setTimeout(()=>location.reload(),600);};
+document.getElementById('closeSave').onclick=()=>{saveEl.hidden=true;ov.hidden=false;renderWallet();};
 function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);draw(now);requestAnimationFrame(loop);}
 setMuted(muted);init();state='menu';
-showOv('BALLOT BOX RUSH','One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.',[['PLAY',startGame],['SHOP',openShop,'alt']],true);
+showOv('BALLOT BOX RUSH','One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.',[['PLAY',startGame],['SHOP',openShop,'alt'],['SAVE CODE',openSave,'alt']],true);
 document.getElementById('legend').hidden=false;
 requestAnimationFrame(loop);
 </script>
