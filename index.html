@@ -60,12 +60,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .pad button{flex:1;height:70px;padding:0;font-size:18px;background:var(--panel);border-bottom-color:#070a1a}
 .pad .jump{flex:1.6;background:var(--red);border-bottom-color:#a3202d;font-size:11px}
 .pad button.on{transform:translateY(2px);border-bottom-width:2px}
-.pad{display:none}
+@media (hover:hover) and (pointer:fine){.pad{display:none}}
 
 .ver{font-family:var(--display);font-size:7px;color:var(--muted);opacity:.8}
-#stick{position:fixed;left:0;top:0;width:120px;height:120px;border-radius:50%;background:rgba(244,241,255,.12);border:2px solid rgba(244,241,255,.35);pointer-events:none;z-index:5;opacity:0;transition:opacity .12s}
-#stick.on{opacity:1}
-#knob{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:rgba(255,210,63,.85);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
@@ -85,7 +82,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <h2 id="ovTitle">BALLOT BOX RUSH</h2>
     <p id="ovText">One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.</p>
     <div class="legend" id="legend">
-      <span>Phone: put a finger anywhere and a stick appears. Slide left or right to walk, push up to jump (keep it up to climb). Tap to jump, or tap with a second finger.</span>
+      <span>Tap the screen or JUMP to jump. Hold jump on a ladder or rope to climb, let go of a rope to slide down.</span>
       <span>✉ Ballot +1 vote · ● Coin +$10 · 💰 Bag +$100</span>
       <span>Stomp lobbyists and hecklers from above. Touching them from the side ends your run.</span>
       <span>Hecklers throw NO-vote letters: each hit costs 5 votes.</span>
@@ -95,7 +92,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 5 · JOYSTICK</div>
+    <div class="ver">VERSION 6 · ARROWS</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -105,7 +102,6 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <button class="alt" id="closeShop">BACK</button>
   </div>
 </div>
-<div id="stick" aria-hidden="true"><div id="knob"></div></div>
 <div class="pad">
   <button data-k="left" aria-label="Left">◀</button>
   <button data-k="right" aria-label="Right">▶</button>
@@ -778,15 +774,17 @@ function updatePet(dt){
   else if(Math.hypot(fx-last.x,fy-last.y)>.4||air!==last.air)petHist.push({x:fx,y:fy,air,face:P.face});
   if(petHist.length>PET_LAG+1)petHist.splice(0,petHist.length-PET_LAG-1);
   const t=petHist[0],ox=pet.x;
-  // never stand in front of or on top of Boxy: keep at least 26px behind him
-  let want=0;const side=t.x-fx;
-  if(Math.abs(t.y-fy)<60&&(Math.abs(side)<26||Math.sign(side)==P.face)){
-    let bx=fx-P.face*26;const pl=P.on;
-    if(pl&&!pet.air&&(bx<pl.x+6||bx>pl.x+pl.w-6))bx=clamp(bx,pl.x+6,pl.x+pl.w-6);
-    if(pl&&!pet.air&&Math.abs(bx-fx)<26)bx=clamp(fx+P.face*26,pl.x+6,pl.x+pl.w-6);
-    want=bx-t.x;}
-  pet.off=(pet.off||0)+(want-(pet.off||0))*Math.min(1,dt*10);
-  pet.x=t.x+pet.off;pet.y=t.y;pet.air=t.air;if(!pet.act)pet.face=Math.abs(pet.off)>4?P.face:t.face;
+  // always stay BEHIND Boxy with a clear gap so he never touches him; hop over Boxy when he turns
+  const GAP=44,want=P.face==1?Math.min(t.x,fx-GAP):Math.max(t.x,fx+GAP);
+  if(pet.cx===undefined)pet.cx=want;
+  pet.cx+=(want-pet.cx)*Math.min(1,dt*9);
+  const dxB=Math.abs(pet.cx-fx),crossing=Math.sign(pet.cx-fx)==P.face||dxB<GAP-2;
+  const hop=crossing?Math.min(48,Math.max(0,GAP-dxB+6)*1.7):0;
+  pet.x=pet.cx;pet.y=t.y-hop;
+  const list=state=='boss'?arena:plats;
+  const ground=list&&list.some(p=>Math.abs(p.y-t.y)<6&&pet.x>p.x-4&&pet.x<p.x+p.w+4);
+  pet.hover=!t.air&&!crossing&&!ground;if(pet.hover)pet.y=t.y-6+Math.sin(performance.now()/200)*2;
+  pet.air=t.air||crossing||pet.hover;if(!pet.act)pet.face=P.face;
   if(state!='boss'&&state!='pause'){pet.act=null;pet.blend=Math.max(0,(pet.blend||0)-dt*5);}
   pet.moving=Math.abs(pet.x-ox)>.2;if(pet.moving&&!pet.air)pet.walk+=dt*14;
   pet.blink-=dt;if(pet.blink<-3)pet.blink=.12;
@@ -960,7 +958,7 @@ function hud(){
   document.getElementById('zone').textContent=state=='boss'?'BOSS':(cur+1);document.getElementById('best').textContent=store.get('bestZone',1);
 }
 function startGame(){audioOn();init();ov.hidden=true;state='play';lastScene='world';step=0;}
-function pause(){if(state!='play'&&state!='boss')return;pausedFrom=state;state='pause';tch.clear();hideStick();for(const k in keys)keys[k]=false;
+function pause(){if(state!='play'&&state!='boss')return;pausedFrom=state;state='pause';screenTouches=0;for(const k in keys)keys[k]=false;
   showOv('Paused',`Zone ${cur+1} · ${votes} votes · $${dollars}`,[['RESUME',resume],['END RUN',()=>{state=pausedFrom;gameOver();},'alt']],false);}
 function resume(){ov.hidden=true;state=pausedFrom;last=performance.now();}
 document.getElementById('pauseBtn').onclick=()=>{if(state=='pause')resume();else pause();};
@@ -981,46 +979,12 @@ document.querySelectorAll('.pad button').forEach(b=>{const k=b.dataset.k;
   const on=e=>{e.preventDefault();keys[k]=true;b.classList.add('on');},off=e=>{e.preventDefault();keys[k]=false;b.classList.remove('on');};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
   b.addEventListener('contextmenu',e=>e.preventDefault());});
-// floating joystick: put a finger down anywhere and a stick appears under it.
-// Slide sideways to walk (further = faster), push up to jump (hold up to climb), tap to jump.
-// A second finger anywhere also jumps.
-const tch=new Map(),stickEl=document.getElementById('stick'),knobEl=document.getElementById('knob'),STICK_R=46;
-let tapJumpT=null,stickId=null;
-function playing(){return state=='play'||state=='boss';}
-function touchKeys(){
-  let j=tapJumpT!==null;
-  for(const [id,t] of tch)if(id!==stickId||t.up)j=true;
-  keys.jump=j;
-}
-function showStick(x,y,kx,ky){stickEl.style.transform=`translate(${x-60}px,${y-60}px)`;knobEl.style.transform=`translate(${kx}px,${ky}px)`;stickEl.classList.add('on');}
-function hideStick(){stickEl.classList.remove('on');stick.on=false;stick.x=0;stickId=null;}
-function tDown(id,cx,cy,target){
-  if(!playing()||(target&&target.closest&&target.closest('button,.overlay,.shop')))return false;
-  const t={x0:cx,y0:cy,t0:performance.now(),up:false,far:false};tch.set(id,t);
-  if(stickId===null){stickId=id;stick.on=true;stick.x=0;showStick(cx,cy,0,0);}
-  touchKeys();return true;}
-function tMove(id,cx,cy){const t=tch.get(id);if(!t||id!==stickId)return;
-  let dx=cx-t.x0,dy=cy-t.y0;const d=Math.hypot(dx,dy);
-  if(d>12)t.far=true;
-  if(d>STICK_R){ // drag the stick along so it never gets stuck at the edge
-    const k=(d-STICK_R)/d;t.x0+=dx*k;t.y0+=dy*k;dx=cx-t.x0;dy=cy-t.y0;}
-  const nx=dx/STICK_R,ny=dy/STICK_R;
-  stick.x=Math.abs(nx)<.18?0:Math.sign(nx)*Math.min(1,(Math.abs(nx)-.18)/.62);
-  if(ny<-.55)t.up=true;else if(ny>-.3)t.up=false;
-  showStick(t.x0,t.y0,dx,dy);touchKeys();}
-function tUp(id){const t=tch.get(id);if(!t)return;tch.delete(id);
-  if(id===stickId){
-    if(!t.far&&!t.up&&performance.now()-t.t0<200){clearTimeout(tapJumpT);tapJumpT=setTimeout(()=>{tapJumpT=null;touchKeys();},170);}
-    hideStick();}
-  touchKeys();}
-// touch events work in every phone browser (Safari, Chrome, in-app browsers)
-addEventListener('touchstart',e=>{let used=false;for(const t of e.changedTouches)if(tDown('t'+t.identifier,t.clientX,t.clientY,e.target))used=true;if(used)e.preventDefault();},{passive:false});
-addEventListener('touchmove',e=>{if(!tch.size)return;e.preventDefault();for(const t of e.changedTouches)tMove('t'+t.identifier,t.clientX,t.clientY);},{passive:false});
-['touchend','touchcancel'].forEach(ev=>addEventListener(ev,e=>{for(const t of e.changedTouches)tUp('t'+t.identifier);}));
-// pen / other pointers without touch events
-addEventListener('pointerdown',e=>{if(e.pointerType=='mouse'||e.pointerType=='touch')return;if(tDown('p'+e.pointerId,e.clientX,e.clientY,e.target))e.preventDefault();});
-addEventListener('pointermove',e=>{if(e.pointerType!='mouse'&&e.pointerType!='touch')tMove('p'+e.pointerId,e.clientX,e.clientY);});
-['pointerup','pointercancel'].forEach(ev=>addEventListener(ev,e=>{if(e.pointerType!='mouse'&&e.pointerType!='touch')tUp('p'+e.pointerId);}));
+// tap anywhere on the playfield to jump (hold to keep climbing)
+let screenTouches=0;
+function hideStick(){}
+cv.addEventListener('pointerdown',e=>{if(state!='play'&&state!='boss')return;e.preventDefault();screenTouches++;keys.jump=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+const cvUp=()=>{screenTouches=Math.max(0,screenTouches-1);if(!screenTouches)keys.jump=false;};
+cv.addEventListener('pointerup',cvUp);cv.addEventListener('pointercancel',cvUp);
 function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);draw(now);requestAnimationFrame(loop);}
 setMuted(muted);init();state='menu';
 showOv('BALLOT BOX RUSH','One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.',[['PLAY',startGame],['SHOP',openShop,'alt']],true);

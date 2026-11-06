@@ -6,7 +6,7 @@ A one-life platform game. Guide Boxy the ballot box as far as you can along the 
 Open `index.html` in a browser. Everything is in that one file.
 
 ## Controls
-- **Phone:** floating joystick anywhere on the screen: slide to walk, push up or tap to jump (a second finger also jumps), FIRE in boss fights, RALLY/VETO when the meter is full (100 ballots).
+- **Phone:** ◀ ▶ to move, tap the screen or JUMP to jump, FIRE in boss fights, RALLY/VETO when the meter is full (100 ballots).
 - **Keyboard:** arrow keys or WASD, Space to jump, F to fire, R for rally/veto, P or Esc to pause.
 
 ## Features
