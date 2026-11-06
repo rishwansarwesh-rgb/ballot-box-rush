@@ -61,6 +61,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .pad .jump{flex:1.6;background:var(--red);border-bottom-color:#a3202d;font-size:11px}
 .pad button.on{transform:translateY(2px);border-bottom-width:2px}
 .pad{display:none}
+#stick{position:fixed;left:0;top:0;width:120px;height:120px;border-radius:50%;background:rgba(244,241,255,.12);border:2px solid rgba(244,241,255,.35);pointer-events:none;z-index:5;opacity:0;transition:opacity .12s}
+#stick.on{opacity:1}
+#knob{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:rgba(255,210,63,.85);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
@@ -80,7 +83,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <h2 id="ovTitle">BALLOT BOX RUSH</h2>
     <p id="ovText">One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.</p>
     <div class="legend" id="legend">
-      <span>Phone: hold the left or right half of the screen to walk. Tap or swipe up to jump (a second finger works too). Keep your finger up on a ladder or rope to climb.</span>
+      <span>Phone: put a finger anywhere and a stick appears. Slide left or right to walk, push up to jump (keep it up to climb). Tap to jump, or tap with a second finger.</span>
       <span>✉ Ballot +1 vote · ● Coin +$10 · 💰 Bag +$100</span>
       <span>Stomp lobbyists and hecklers from above. Touching them from the side ends your run.</span>
       <span>Hecklers throw NO-vote letters: each hit costs 5 votes.</span>
@@ -99,6 +102,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <button class="alt" id="closeShop">BACK</button>
   </div>
 </div>
+<div id="stick" aria-hidden="true"><div id="knob"></div></div>
 <div class="pad">
   <button data-k="left" aria-label="Left">◀</button>
   <button data-k="right" aria-label="Right">▶</button>
@@ -108,7 +112,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),VW=360,VH=640;
 (function(){const d=window.devicePixelRatio||1;cv.width=VW*d;cv.height=VH*d;ctx.setTransform(d,0,0,d,0,0);})();
-const keys={left:false,right:false,jump:false,fire:false};
+const keys={left:false,right:false,jump:false,fire:false},stick={on:false,x:0};
 const G=1800,JV=-800,SPD=230,RALLY_NEED=100,REVIVE_COST=250,WALL=8;
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const PW={wings:{n:'WINGS',d:15,c:'#9fe8ff'},rocket:{n:'ROCKET',d:2.6,c:'#ff4d5e'},magnet:{n:'MAGNET',d:12,c:'#c77dff'},shield:{n:'SHIELD',d:25,c:'#3ddc84'},spring:{n:'SUPER JUMP',d:12,c:'#ffd23f'}};
@@ -321,7 +325,7 @@ function findSeg(){
 
 /* ---------- shared player physics ---------- */
 function physics(dt,list,bounds,seg){
-  const ax=(keys.right?1:0)-(keys.left?1:0);
+  const ax=stick.on?stick.x:(keys.right?1:0)-(keys.left?1:0),axs=Math.abs(ax)>.15?Math.sign(ax):0;
   for(const k in pw){pw[k]-=dt;if(pw[k]<=0)delete pw[k];}
   const pressed=keys.jump&&!jumpHeld;if(pressed)buffer=.18;jumpHeld=keys.jump;
   buffer-=dt;coyote-=dt;inv=Math.max(0,inv-dt);climbCD-=dt;dropT-=dt;
@@ -335,12 +339,12 @@ function physics(dt,list,bounds,seg){
     const c=climb;P.x+=(c.x-P.w/2-P.x)*Math.min(1,dt*14);P.vx=0;P.on=null;
     if(keys.jump)P.vy=c.kind=='ladder'?-200:-160;else P.vy=c.kind=='ladder'?0:130;
     P.y+=P.vy*dt;
-    if(ax){climb=null;climbCD=.3;P.vx=ax*SPD;P.vy=-320;P.face=ax;}
+    if(Math.abs(ax)>.5){climb=null;climbCD=.3;P.vx=axs*SPD;P.vy=-320;P.face=axs;}
     else if(P.y+P.h<c.y0){climb=null;climbCD=.3;P.vy=-380;}
     else if(P.y+P.h>c.y1+6){climb=null;climbCD=.3;}
     if(climb){P.walk+=dt*8;return oldBottom;}
   }
-  const tv=ax*SPD;P.vx+=(tv-P.vx)*Math.min(1,dt*(P.on?18:10));if(Math.abs(P.vx)<4&&!ax)P.vx=0;if(ax)P.face=ax;
+  const tv=ax*SPD;P.vx+=(tv-P.vx)*Math.min(1,dt*(P.on?18:10));if(Math.abs(P.vx)<4&&!axs)P.vx=0;if(axs)P.face=axs;
   const jv=JV*(pw.spring?1.3:1);
   if(buffer>0&&coyote>0){P.vy=jv;coyote=0;buffer=0;P.on=null;airJumps=pw.wings?1:0;sfx('jump');}
   else if(pressed&&pw.wings&&airJumps>0&&!P.on){P.vy=jv*.9;airJumps--;buffer=0;sfx('jump');}
@@ -953,7 +957,7 @@ function hud(){
   document.getElementById('zone').textContent=state=='boss'?'BOSS':(cur+1);document.getElementById('best').textContent=store.get('bestZone',1);
 }
 function startGame(){audioOn();init();ov.hidden=true;state='play';lastScene='world';step=0;}
-function pause(){if(state!='play'&&state!='boss')return;pausedFrom=state;state='pause';tch.clear();for(const k in keys)keys[k]=false;
+function pause(){if(state!='play'&&state!='boss')return;pausedFrom=state;state='pause';tch.clear();hideStick();for(const k in keys)keys[k]=false;
   showOv('Paused',`Zone ${cur+1} · ${votes} votes · $${dollars}`,[['RESUME',resume],['END RUN',()=>{state=pausedFrom;gameOver();},'alt']],false);}
 function resume(){ov.hidden=true;state=pausedFrom;last=performance.now();}
 document.getElementById('pauseBtn').onclick=()=>{if(state=='pause')resume();else pause();};
@@ -974,29 +978,40 @@ document.querySelectorAll('.pad button').forEach(b=>{const k=b.dataset.k;
   const on=e=>{e.preventDefault();keys[k]=true;b.classList.add('on');},off=e=>{e.preventDefault();keys[k]=false;b.classList.remove('on');};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
   b.addEventListener('contextmenu',e=>e.preventDefault());});
-// whole-screen touch controls: hold left/right half to walk, swipe up or tap to jump,
-// a second finger anywhere also jumps (hold it to keep climbing)
-const tch=new Map();let tapJumpT=null;
-function touchKeys(){
-  let l=false,r=false,j=false;
-  const now=performance.now();
-  for(const t of tch.values()){if(t.role=='move'){if(t.up)j=true;if(t.up||t.moved||now-t.t0>85){if(t.side<0)l=true;else r=true;}}else j=true;}
-  keys.left=l;keys.right=r;keys.jump=j||tapJumpT!==null;
-}
+// floating joystick: put a finger down anywhere and a stick appears under it.
+// Slide sideways to walk (further = faster), push up to jump (hold up to climb), tap to jump.
+// A second finger anywhere also jumps.
+const tch=new Map(),stickEl=document.getElementById('stick'),knobEl=document.getElementById('knob'),STICK_R=46;
+let tapJumpT=null,stickId=null;
 function playing(){return state=='play'||state=='boss';}
+function touchKeys(){
+  let j=tapJumpT!==null;
+  for(const [id,t] of tch)if(id!==stickId||t.up)j=true;
+  keys.jump=j;
+}
+function showStick(x,y,kx,ky){stickEl.style.transform=`translate(${x-60}px,${y-60}px)`;knobEl.style.transform=`translate(${kx}px,${ky}px)`;stickEl.classList.add('on');}
+function hideStick(){stickEl.classList.remove('on');stick.on=false;stick.x=0;stickId=null;}
 addEventListener('pointerdown',e=>{
   if(e.pointerType=='mouse'||!playing()||(e.target.closest&&e.target.closest('button,.overlay,.shop')))return;
   e.preventDefault();
-  const hasMove=[...tch.values()].some(t=>t.role=='move');
-  tch.set(e.pointerId,{role:hasMove?'jump':'move',x0:e.clientX,y0:e.clientY,t0:performance.now(),side:e.clientX<innerWidth/2?-1:1,up:false,moved:false});
-  touchKeys();setTimeout(touchKeys,90);
+  const t={x0:e.clientX,y0:e.clientY,t0:performance.now(),up:false,far:false};tch.set(e.pointerId,t);
+  if(stickId===null){stickId=e.pointerId;stick.on=true;stick.x=0;showStick(e.clientX,e.clientY,0,0);}
+  touchKeys();
 },{passive:false});
 addEventListener('pointermove',e=>{const t=tch.get(e.pointerId);if(!t)return;e.preventDefault();
-  if(t.role=='move'){t.side=e.clientX<innerWidth/2?-1:1;if(Math.abs(e.clientX-t.x0)>20)t.moved=true;if(t.y0-e.clientY>28)t.up=true;else if(t.y0-e.clientY<8)t.up=false;}
-  touchKeys();},{passive:false});
+  if(e.pointerId!==stickId)return;
+  let dx=e.clientX-t.x0,dy=e.clientY-t.y0;const d=Math.hypot(dx,dy);
+  if(d>12)t.far=true;
+  if(d>STICK_R){ // drag the stick along so it never gets stuck at the edge
+    const k=(d-STICK_R)/d;t.x0+=dx*k;t.y0+=dy*k;dx=e.clientX-t.x0;dy=e.clientY-t.y0;}
+  const nx=dx/STICK_R,ny=dy/STICK_R;
+  stick.x=Math.abs(nx)<.18?0:Math.sign(nx)*Math.min(1,(Math.abs(nx)-.18)/.62);
+  if(ny<-.55)t.up=true;else if(ny>-.3)t.up=false;
+  showStick(t.x0,t.y0,dx,dy);touchKeys();},{passive:false});
 const touchEnd=e=>{const t=tch.get(e.pointerId);if(!t)return;tch.delete(e.pointerId);
-  if(t.role=='move'&&!t.up&&performance.now()-t.t0<170&&Math.hypot(e.clientX-t.x0,e.clientY-t.y0)<20){
-    clearTimeout(tapJumpT);tapJumpT=setTimeout(()=>{tapJumpT=null;touchKeys();},170);}
+  if(e.pointerId===stickId){
+    if(!t.far&&!t.up&&performance.now()-t.t0<200){clearTimeout(tapJumpT);tapJumpT=setTimeout(()=>{tapJumpT=null;touchKeys();},170);}
+    hideStick();}
   touchKeys();};
 ['pointerup','pointercancel'].forEach(ev=>addEventListener(ev,touchEnd));
 function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);draw(now);requestAnimationFrame(loop);}
