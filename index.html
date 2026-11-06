@@ -771,7 +771,15 @@ function updatePet(dt){
   else if(Math.hypot(fx-last.x,fy-last.y)>.4||air!==last.air)petHist.push({x:fx,y:fy,air,face:P.face});
   if(petHist.length>PET_LAG+1)petHist.splice(0,petHist.length-PET_LAG-1);
   const t=petHist[0],ox=pet.x;
-  pet.x=t.x;pet.y=t.y;pet.air=t.air;if(!pet.act)pet.face=t.face;
+  // never stand in front of or on top of Boxy: keep at least 26px behind him
+  let want=0;const side=t.x-fx;
+  if(Math.abs(t.y-fy)<60&&(Math.abs(side)<26||Math.sign(side)==P.face)){
+    let bx=fx-P.face*26;const pl=P.on;
+    if(pl&&!pet.air&&(bx<pl.x+6||bx>pl.x+pl.w-6))bx=clamp(bx,pl.x+6,pl.x+pl.w-6);
+    if(pl&&!pet.air&&Math.abs(bx-fx)<26)bx=clamp(fx+P.face*26,pl.x+6,pl.x+pl.w-6);
+    want=bx-t.x;}
+  pet.off=(pet.off||0)+(want-(pet.off||0))*Math.min(1,dt*10);
+  pet.x=t.x+pet.off;pet.y=t.y;pet.air=t.air;if(!pet.act)pet.face=Math.abs(pet.off)>4?P.face:t.face;
   if(state!='boss'&&state!='pause'){pet.act=null;pet.blend=Math.max(0,(pet.blend||0)-dt*5);}
   pet.moving=Math.abs(pet.x-ox)>.2;if(pet.moving&&!pet.air)pet.walk+=dt*14;
   pet.blink-=dt;if(pet.blink<-3)pet.blink=.12;
