@@ -82,7 +82,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     <h2 id="ovTitle">BALLOT BOX RUSH</h2>
     <p id="ovText">One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.</p>
     <div class="legend" id="legend">
-      <span>Tap the screen or JUMP to jump. Hold jump on a ladder or rope to climb, let go of a rope to slide down.</span>
+      <span>Tap the screen or JUMP to jump (in boss fights tapping the screen shoots). Hold jump on a ladder or rope to climb, let go of a rope to slide down.</span>
       <span>✉ Ballot +1 vote · ● Coin +$10 · 💰 Bag +$100</span>
       <span>Stomp lobbyists and hecklers from above. Touching them from the side ends your run.</span>
       <span>Hecklers throw NO-vote letters: each hit costs 5 votes.</span>
@@ -92,7 +92,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 6 · ARROWS</div>
+    <div class="ver">VERSION 7 · TAP TO SHOOT</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -512,7 +512,7 @@ function enterBoss(){
   B={x:VW/2-48,y:-120,w:96,h:84,hp,max:hp,mode:'enter',t:5,atk:1.5,ph:0,vy:0,flash:0,dead:0,rage:false,slams:0};
   P.x=VW/2-14;P.y=566;P.vx=P.vy=0;P.on=null;shots=[];bshots=[];waves=[];rallyT=0;inv=1.5;trail=[];parts=[];
   lives=LIVES;petPw={};pshots=[];if(pet){pet.act=null;pet.blend=0;pet.cd=1;}B.pwT=2.5;items=items.filter(i=>i.seg!='boss');
-  fireBtn.hidden=false;pop(VW/2,300,'BOSS FIGHT!');
+  fireBtn.hidden=true;pop(VW/2,300,'BOSS FIGHT!');
 }
 function hitBoss(n){if(B.hp<=0)return;B.hp-=n;B.flash=.12;sfx('hit');
   if(!B.rage&&B.hp<=B.max/2){B.rage=true;pop(B.x+B.w/2,B.y-24,'RAGE MODE!');shake=.4;sfx('warn');}
@@ -528,7 +528,8 @@ function slamTarget(){B.mode='windup';B.t=B.rage?.5:.8;B.tx=clamp(P.x+14-B.w/2,0
 function updateBoss(dt){
   fireCD-=dt;
   if(keys.fire&&fireCD<=0&&B.hp>0){fireCD=.28;
-    const sx=P.x+14,sy=P.y+6,dx=B.x+B.w/2-sx,dy=B.y+B.h/2-sy,d=Math.hypot(dx,dy)||1;shots.push({x:sx,y:sy,vx:dx/d*520,vy:dy/d*520,a:0});sfx('shoot');}
+    const sx=P.x+14,sy=P.y+6,lead=Math.hypot(B.x+B.w/2-sx,B.y+B.h/2-sy)/520,dx=B.x+B.w/2+clamp((B.vxE||0)*lead,-160,160)-sx,dy=B.y+B.h/2-sy,d=Math.hypot(dx,dy)||1;shots.push({x:sx,y:sy,vx:dx/d*520,vy:dy/d*520,a:0});sfx('shoot');}
+  B.vxE=dt>0&&B.pxx!==undefined?(B.x-B.pxx)/dt:0;B.pxx=B.x; // boss speed, so shots aim where he is going
   const oldBottom=physics(dt,arena,[0,VW],{type:'boss'});
   collect(dt);if(state!='boss')return;
   bossPickups(dt);petBoss(dt);
@@ -982,8 +983,9 @@ document.querySelectorAll('.pad button').forEach(b=>{const k=b.dataset.k;
 // tap anywhere on the playfield to jump (hold to keep climbing)
 let screenTouches=0;
 function hideStick(){}
-cv.addEventListener('pointerdown',e=>{if(state!='play'&&state!='boss')return;e.preventDefault();screenTouches++;keys.jump=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}});
-const cvUp=()=>{screenTouches=Math.max(0,screenTouches-1);if(!screenTouches)keys.jump=false;};
+// in boss fights tapping the screen fires instead (hold to keep firing); jump with the JUMP button
+cv.addEventListener('pointerdown',e=>{if(state!='play'&&state!='boss')return;e.preventDefault();screenTouches++;if(state=='boss')keys.fire=true;else keys.jump=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+const cvUp=()=>{screenTouches=Math.max(0,screenTouches-1);if(!screenTouches){keys.jump=false;keys.fire=false;}};
 cv.addEventListener('pointerup',cvUp);cv.addEventListener('pointercancel',cvUp);
 function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);draw(now);requestAnimationFrame(loop);}
 setMuted(muted);init();state='menu';
