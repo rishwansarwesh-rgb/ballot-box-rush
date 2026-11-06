@@ -95,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 12 · SAVE CODE</div>
+    <div class="ver">VERSION 13 · S.C. STYLE</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -826,7 +826,7 @@ const PETS=[
   {id:'speaker',name:'The Speaker',price:900,desc:'Robe and gavel',skin:'#f1c7a0',suit:'#111522',lapel:'#000',pants:'#111522',tie:'#fff',robe:true,hair:'wig',hairC:'#f4f1ff',item:'gavel'},
   {id:'campaign',name:'Campaign Boss',price:1300,desc:'Red blazer, clipboard',skin:'#f6d2b6',suit:'#d2343f',lapel:'#a3202d',pants:'#23252f',tie:null,hair:'bob',hairC:'#b5502a',item:'clipboard'},
   {id:'robocand',name:'Robo Candidate',price:2000,desc:'Runs on promises',skin:'#a9b4c2',suit:'#6c7a89',lapel:'#4a5563',pants:'#4a5563',tie:'#3de0e0',hair:'antenna',hairC:'#ff4d5e',robot:true,item:'flag'},
-  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#15161c',lapel:'#000',pants:'#15161c',tie:'#15161c',hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
+  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#7d8290',lapel:'#5b606c',pants:'#6c717e',tie:'#d2232f',pinstripe:'#c9ccd6',twoEyes:true,hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
   {id:'ghost',name:'Floating Voter',price:3000,desc:'Never picks a side',skin:'#dfe7ff',suit:'#dfe7ff',lapel:'#b9c4e8',pants:null,tie:null,hair:'none',ghost:true}
 ];
 let petOwned=store.get('petOwned',['quiff']),petEq=store.get('petEq','quiff');
@@ -844,6 +844,8 @@ function petFigure(c,k,st,now){
   c.fillStyle=k.suit;
   if(k.robe){c.beginPath();c.moveTo(-6,2);c.lineTo(6,2);c.lineTo(8,18);c.lineTo(-8,18);c.closePath();c.fill();}
   else rr(c,-6,2,12,13,k.robot?1:3),c.fill();
+  if(k.pinstripe){c.strokeStyle=k.pinstripe;c.lineWidth=.5;c.beginPath();for(let px=-4.5;px<=4.6;px+=2.2){c.moveTo(px,3);c.lineTo(px,14.5);}
+    c.moveTo(-3.5,15);c.lineTo(-3.5,20);c.moveTo(-1.8,15);c.lineTo(-1.8,20);c.moveTo(2.5,15);c.lineTo(2.5,20);c.stroke();}
   if(k.hoodie){c.fillStyle=k.lapel;c.fillRect(-3,9,6,3);c.strokeStyle='#fff';c.lineWidth=.8;c.beginPath();c.moveTo(-1.5,2);c.lineTo(-1.5,6);c.moveTo(1.5,2);c.lineTo(1.5,6);c.stroke();}
   else if(!k.ghost&&!k.robot){c.fillStyle='#fff';c.beginPath();c.moveTo(-2.5,2);c.lineTo(2.5,2);c.lineTo(0,8);c.fill();
     if(k.tie=='bow'){c.fillStyle=k.tieC;c.beginPath();c.moveTo(0,3);c.lineTo(-3,1.5);c.lineTo(-3,4.5);c.closePath();c.moveTo(0,3);c.lineTo(3,1.5);c.lineTo(3,4.5);c.closePath();c.fill();}
@@ -869,11 +871,14 @@ function petFigure(c,k,st,now){
   c.fillStyle=k.skin;if(k.robot){rr(c,-5.5,-10,11,11,2);c.fill();}else{c.beginPath();c.arc(0,-4,5.5,0,7);c.fill();}
   // face
   if(k.robot){c.fillStyle='#0b1026';c.fillRect(-4,-7,8,3.5);c.fillStyle='#3de0e0';c.fillRect(st.blink?0:1,-6.5,st.blink?3:2,2.5);c.fillStyle='#0b1026';c.fillRect(-1,-2,5,1);}
+  else if(k.twoEyes){c.fillStyle='#0b1026';for(const ex of [-1.6,2.4]){if(st.blink)c.fillRect(ex-.9,-5,1.9,.8);else c.fillRect(ex-.7,-6,1.5,2);}
+    c.strokeStyle='#0b1026';c.lineWidth=.9;c.beginPath();c.arc(.4,-2.5,1.8,.2,Math.PI-.2);c.stroke();}
   else{c.fillStyle='#0b1026';if(st.blink)c.fillRect(1,-5,2.5,.8);else c.fillRect(1.5,-6,1.6,2);
     c.strokeStyle='#0b1026';c.lineWidth=.9;c.beginPath();if(k.ghost)c.arc(2,-1.5,1.2,0,7);else c.arc(1.5,-2.5,1.8,.2,1.6);c.stroke();}
   if(k.beard){c.fillStyle=k.hairC;c.beginPath();c.moveTo(-4.5,-3.5);c.quadraticCurveTo(-4.5,2.2,0.5,2);c.quadraticCurveTo(5.6,1.8,5.4,-3.2);c.lineTo(4.4,-3);c.quadraticCurveTo(4,-.6,1.5,-.6);c.quadraticCurveTo(-1,-.6,-2.5,-3.4);c.closePath();c.fill();
     c.fillRect(-.5,-2.4,4,.9);}
-  if(k.glasses){c.strokeStyle='#0b1026';c.lineWidth=.8;c.beginPath();c.arc(2.3,-5,2,0,7);c.moveTo(.3,-5);c.lineTo(-3,-5.5);c.stroke();}
+  if(k.glasses&&k.twoEyes){c.strokeStyle='#0b1026';c.lineWidth=.7;c.beginPath();c.arc(-1.6,-5,1.7,0,7);c.moveTo(4.1,-5);c.arc(2.4,-5,1.7,0,7);c.moveTo(.1,-5.2);c.lineTo(.7,-5.2);c.moveTo(-3.3,-5);c.lineTo(-5,-5.6);c.stroke();}
+  else if(k.glasses){c.strokeStyle='#0b1026';c.lineWidth=.8;c.beginPath();c.arc(2.3,-5,2,0,7);c.moveTo(.3,-5);c.lineTo(-3,-5.5);c.stroke();}
   // hair / headwear
   const H=k.hairC;c.fillStyle=H;
   if(k.hair=='quiff'){c.fillRect(-4,-5,1.6,4);c.beginPath();
