@@ -61,6 +61,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .pad .jump{flex:1.6;background:var(--red);border-bottom-color:#a3202d;font-size:11px}
 .pad button.on{transform:translateY(2px);border-bottom-width:2px}
 .pad{display:none}
+
+.ver{font-family:var(--display);font-size:7px;color:var(--muted);opacity:.8}
 #stick{position:fixed;left:0;top:0;width:120px;height:120px;border-radius:50%;background:rgba(244,241,255,.12);border:2px solid rgba(244,241,255,.35);pointer-events:none;z-index:5;opacity:0;transition:opacity .12s}
 #stick.on{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:rgba(255,210,63,.85);box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -93,6 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
+    <div class="ver">VERSION 5 · JOYSTICK</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -991,29 +994,33 @@ function touchKeys(){
 }
 function showStick(x,y,kx,ky){stickEl.style.transform=`translate(${x-60}px,${y-60}px)`;knobEl.style.transform=`translate(${kx}px,${ky}px)`;stickEl.classList.add('on');}
 function hideStick(){stickEl.classList.remove('on');stick.on=false;stick.x=0;stickId=null;}
-addEventListener('pointerdown',e=>{
-  if(e.pointerType=='mouse'||!playing()||(e.target.closest&&e.target.closest('button,.overlay,.shop')))return;
-  e.preventDefault();
-  const t={x0:e.clientX,y0:e.clientY,t0:performance.now(),up:false,far:false};tch.set(e.pointerId,t);
-  if(stickId===null){stickId=e.pointerId;stick.on=true;stick.x=0;showStick(e.clientX,e.clientY,0,0);}
-  touchKeys();
-},{passive:false});
-addEventListener('pointermove',e=>{const t=tch.get(e.pointerId);if(!t)return;e.preventDefault();
-  if(e.pointerId!==stickId)return;
-  let dx=e.clientX-t.x0,dy=e.clientY-t.y0;const d=Math.hypot(dx,dy);
+function tDown(id,cx,cy,target){
+  if(!playing()||(target&&target.closest&&target.closest('button,.overlay,.shop')))return false;
+  const t={x0:cx,y0:cy,t0:performance.now(),up:false,far:false};tch.set(id,t);
+  if(stickId===null){stickId=id;stick.on=true;stick.x=0;showStick(cx,cy,0,0);}
+  touchKeys();return true;}
+function tMove(id,cx,cy){const t=tch.get(id);if(!t||id!==stickId)return;
+  let dx=cx-t.x0,dy=cy-t.y0;const d=Math.hypot(dx,dy);
   if(d>12)t.far=true;
   if(d>STICK_R){ // drag the stick along so it never gets stuck at the edge
-    const k=(d-STICK_R)/d;t.x0+=dx*k;t.y0+=dy*k;dx=e.clientX-t.x0;dy=e.clientY-t.y0;}
+    const k=(d-STICK_R)/d;t.x0+=dx*k;t.y0+=dy*k;dx=cx-t.x0;dy=cy-t.y0;}
   const nx=dx/STICK_R,ny=dy/STICK_R;
   stick.x=Math.abs(nx)<.18?0:Math.sign(nx)*Math.min(1,(Math.abs(nx)-.18)/.62);
   if(ny<-.55)t.up=true;else if(ny>-.3)t.up=false;
-  showStick(t.x0,t.y0,dx,dy);touchKeys();},{passive:false});
-const touchEnd=e=>{const t=tch.get(e.pointerId);if(!t)return;tch.delete(e.pointerId);
-  if(e.pointerId===stickId){
+  showStick(t.x0,t.y0,dx,dy);touchKeys();}
+function tUp(id){const t=tch.get(id);if(!t)return;tch.delete(id);
+  if(id===stickId){
     if(!t.far&&!t.up&&performance.now()-t.t0<200){clearTimeout(tapJumpT);tapJumpT=setTimeout(()=>{tapJumpT=null;touchKeys();},170);}
     hideStick();}
-  touchKeys();};
-['pointerup','pointercancel'].forEach(ev=>addEventListener(ev,touchEnd));
+  touchKeys();}
+// touch events work in every phone browser (Safari, Chrome, in-app browsers)
+addEventListener('touchstart',e=>{let used=false;for(const t of e.changedTouches)if(tDown('t'+t.identifier,t.clientX,t.clientY,e.target))used=true;if(used)e.preventDefault();},{passive:false});
+addEventListener('touchmove',e=>{if(!tch.size)return;e.preventDefault();for(const t of e.changedTouches)tMove('t'+t.identifier,t.clientX,t.clientY);},{passive:false});
+['touchend','touchcancel'].forEach(ev=>addEventListener(ev,e=>{for(const t of e.changedTouches)tUp('t'+t.identifier);}));
+// pen / other pointers without touch events
+addEventListener('pointerdown',e=>{if(e.pointerType=='mouse'||e.pointerType=='touch')return;if(tDown('p'+e.pointerId,e.clientX,e.clientY,e.target))e.preventDefault();});
+addEventListener('pointermove',e=>{if(e.pointerType!='mouse'&&e.pointerType!='touch')tMove('p'+e.pointerId,e.clientX,e.clientY);});
+['pointerup','pointercancel'].forEach(ev=>addEventListener(ev,e=>{if(e.pointerType!='mouse'&&e.pointerType!='touch')tUp('p'+e.pointerId);}));
 function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;update(dt);draw(now);requestAnimationFrame(loop);}
 setMuted(muted);init();state='menu';
 showOv('BALLOT BOX RUSH','One life. Travel the campaign trail as far as you can: up, down, left and right. Follow the arrow at the edge of the screen.',[['PLAY',startGame],['SHOP',openShop,'alt']],true);
