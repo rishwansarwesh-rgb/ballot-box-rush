@@ -95,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 13 · S.C. STYLE</div>
+    <div class="ver">VERSION 14 · S.C. FADE</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -826,7 +826,7 @@ const PETS=[
   {id:'speaker',name:'The Speaker',price:900,desc:'Robe and gavel',skin:'#f1c7a0',suit:'#111522',lapel:'#000',pants:'#111522',tie:'#fff',robe:true,hair:'wig',hairC:'#f4f1ff',item:'gavel'},
   {id:'campaign',name:'Campaign Boss',price:1300,desc:'Red blazer, clipboard',skin:'#f6d2b6',suit:'#d2343f',lapel:'#a3202d',pants:'#23252f',tie:null,hair:'bob',hairC:'#b5502a',item:'clipboard'},
   {id:'robocand',name:'Robo Candidate',price:2000,desc:'Runs on promises',skin:'#a9b4c2',suit:'#6c7a89',lapel:'#4a5563',pants:'#4a5563',tie:'#3de0e0',hair:'antenna',hairC:'#ff4d5e',robot:true,item:'flag'},
-  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#7d8290',lapel:'#5b606c',pants:'#6c717e',tie:'#d2232f',pinstripe:'#c9ccd6',twoEyes:true,hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
+  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#4b4f5a',lapel:'#33363e',pants:'#3f434d',tie:'#d2232f',pinstripe:'#8e939f',twoEyes:true,hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
   {id:'ghost',name:'Floating Voter',price:3000,desc:'Never picks a side',skin:'#dfe7ff',suit:'#dfe7ff',lapel:'#b9c4e8',pants:null,tie:null,hair:'none',ghost:true}
 ];
 let petOwned=store.get('petOwned',['quiff']),petEq=store.get('petEq','quiff');
@@ -892,7 +892,10 @@ function petFigure(c,k,st,now){
   else if(k.hair=='bob'){c.beginPath();c.arc(0,-5,6.3,Math.PI*.95,Math.PI*2.05);c.lineTo(6.3,-6);c.quadraticCurveTo(1,-6,-2,-8);c.quadraticCurveTo(-4,-4,-4.5,0);c.lineTo(-6.5,0);c.closePath();c.fill();}
   else if(k.hair=='fade'){c.beginPath();c.arc(0,-5,5.7,Math.PI*1.05,Math.PI*1.95);c.lineTo(5.4,-7);c.quadraticCurveTo(0,-8.6,-5.3,-6.5);c.fill();
     for(const [hx,hy] of [[-3.5,-9.6],[-1,-10.6],[1.6,-10.6],[4,-9.6]]){c.beginPath();c.arc(hx,hy,1.5,0,7);c.fill();}
-    c.fillStyle='rgba(20,20,20,.45)';c.fillRect(-5.6,-6.5,2,4);}
+    // taper fade: solid at the top, fading lighter towards the neck, then a sideburn that runs straight into the beard
+    const g=c.createLinearGradient(0,-7.5,0,-1);g.addColorStop(0,H);g.addColorStop(.55,'rgba(20,20,20,.7)');g.addColorStop(1,'rgba(20,20,20,.3)');
+    c.fillStyle=g;c.beginPath();c.moveTo(-5.8,-7.2);c.lineTo(-2.6,-7.6);c.lineTo(-2.6,-3.2);c.quadraticCurveTo(-3.4,-1.4,-4.8,-1.2);c.quadraticCurveTo(-5.9,-2.6,-5.8,-7.2);c.closePath();c.fill();
+    c.fillStyle=H;c.beginPath();c.moveTo(-4.3,-7);c.lineTo(-2.7,-7);c.lineTo(-2.7,-3.6);c.lineTo(-4.6,-2.6);c.closePath();c.fill();}
   else if(k.hair=='antenna'){c.strokeStyle='#6c7a89';c.lineWidth=1.2;c.beginPath();c.moveTo(0,-10);c.lineTo(0,-14);c.stroke();c.beginPath();c.arc(0,-15,1.6,0,7);c.fill();}
   c.globalAlpha=1;
 }
