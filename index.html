@@ -95,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 18 · S.C. SHOES</div>
+    <div class="ver">VERSION 19 · BOSS FIX</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -390,7 +390,7 @@ function collect(dt){
   for(const it of items){if(it.got||(state=='boss')!=(it.seg=='boss'))continue;
     if(pw.magnet&&it.type!='pw'&&it.type!='portal'){const dx=P.x+P.w/2-it.x,dy=P.y+P.h/2-it.y,d=Math.hypot(dx,dy);if(d<170&&d>1){it.x+=dx/d*380*dt;it.y+=dy/d*380*dt;}}
     if(Math.abs(it.x-(P.x+P.w/2))<26&&Math.abs(it.y-(P.y+P.h/2))<30){
-      if(it.type=='portal'){it.got=true;sfx('portal');enterBoss();return;}
+      if(it.type=='portal'){it.got=true;sfx('portal');if(it.home)exitBoss();else enterBoss();return;}
       it.got=true;
       if(it.type=='pw'&&it.seg=='boss'){petPw[it.k]=PET_PW_T;pop(it.x,it.y,'PET: '+PW[it.k].n);sfx('power');if(pet)pet.cd=Math.min(pet.cd||0,.2);}
       else if(it.type=='pw'){pw[it.k]=PW[it.k].d;pop(it.x,it.y,PW[it.k].n);if(it.k=='wings')airJumps=1;sfx('power');}
@@ -417,7 +417,7 @@ function update(dt){
   for(const q of trail){q.x+=q.vx*dt;q.y+=q.vy*dt;q.t-=dt;}trail=trail.filter(q=>q.t>0);
   popups.forEach(p=>p.t-=dt);popups=popups.filter(p=>p.t>0);
   skinTrail(dt);
-  updatePet(dt);
+  updatePet(dt);updateCash(dt);
   if(state=='boss'){updateBoss(dt);hud();return;}
   findSeg();
   const s=segs[cur];
@@ -450,7 +450,7 @@ function update(dt){
   checkChallenges();
   hud();
 }
-function stomp(f,bonus){f.dead=.001;P.vy=JV*.7;earn(bonus,{x:f.x+f.w/2,y:f.y});run.stomps++;sfx('stomp');shake=.12;checkChallenges();}
+function stomp(f,bonus){caseCash(10);f.dead=.001;P.vy=JV*.7;earn(bonus,{x:f.x+f.w/2,y:f.y});run.stomps++;sfx('stomp');shake=.12;checkChallenges();}
 function updateFoes(dt,oldBottom){
   for(const f of foes){
     if(f.dead){f.dead+=dt;continue;}
@@ -540,7 +540,7 @@ function exitBoss(){
 function slamTarget(){B.mode='windup';B.t=B.rage?.5:.8;B.tx=clamp(P.x+14-B.w/2,0,VW-B.w);sfx('warn');}
 function updateBoss(dt){
   fireCD-=dt;
-  if(keys.fire&&fireCD<=0&&B.hp>0){fireCD=.28;
+  if(keys.fire&&fireCD<=0&&B.hp>0){fireCD=.28;caseCash(3);
     const sx=P.x+14,sy=P.y+6,lead=Math.hypot(B.x+B.w/2-sx,B.y+B.h/2-sy)/520,dx=B.x+B.w/2+clamp((B.vxE||0)*lead,-160,160)-sx,dy=B.y+B.h/2-sy,d=Math.hypot(dx,dy)||1;shots.push({x:sx,y:sy,vx:dx/d*520,vy:dy/d*520,a:0});sfx('shoot');}
   B.vxE=dt>0&&B.pxx!==undefined?(B.x-B.pxx)/dt:0;B.pxx=B.x; // boss speed, so shots aim where he is going
   const oldBottom=physics(dt,arena,[0,VW],{type:'boss'});
@@ -548,7 +548,8 @@ function updateBoss(dt){
   bossPickups(dt);petBoss(dt);
   B.t-=dt;B.atk-=dt;B.flash=Math.max(0,B.flash-dt);
   const lvl=bossCount+(B.rage?1.5:0),sp=B.rage?1.5:1;
-  if(B.mode=='dead'){B.dead+=dt;B.y+=60*dt;if(B.dead>2.2){exitBoss();return;}}
+  if(B.mode=='dead'){B.dead+=dt;B.y=Math.min(B.y+60*dt,600-B.h);
+    if(B.dead>1.2&&!B.portal){B.portal=true;bshots=[];waves=[];items.push({x:VW/2,y:540,type:'portal',seg:'boss',home:true});pop(VW/2,500,'PORTAL HOME!');sfx('portal');}}
   else if(B.mode=='enter'){B.y+=(110-B.y)*dt*3;if(B.y>100){B.mode='float';B.t=rnd(4,6);}}
   else if(B.mode=='float'){
     B.ph+=dt*(1+lvl*.12)*sp;B.x=VW/2-B.w/2+Math.sin(B.ph)*(VW/2-B.w/2-8);B.y+=(110+Math.sin(B.ph*2.3)*20-B.y)*dt*3;
@@ -560,9 +561,10 @@ function updateBoss(dt){
   else if(B.mode=='slam'){B.vy+=2800*dt;B.y+=B.vy*dt;
     if(B.y+B.h>=600){B.y=600-B.h;B.slams--;waves.push({x:B.x,dir:-1},{x:B.x+B.w,dir:1});shake=.35;sfx('stomp');
       if(B.slams>0){B.mode='hop';B.vy=-900;}else{B.mode='dizzy';B.t=B.rage?1.2:1.6;}}}
-  else if(B.mode=='hop'){B.vy+=2800*dt;B.y+=B.vy*dt;if(B.vy>0&&B.y<300){slamTarget();}}
+  else if(B.mode=='hop'){B.vy+=2800*dt;B.y+=B.vy*dt;if(B.vy>=0){slamTarget();}if(B.y+B.h>600){B.y=600-B.h;slamTarget();}}
   else if(B.mode=='dizzy'){if(B.t<=0)B.mode='rise';}
   else if(B.mode=='rise'){B.y+=(110-B.y)*dt*2.5;if(B.y<130){B.mode='float';B.t=rnd(4,6.5)-Math.min(2,lvl*.3);B.ph=Math.asin(clamp((B.x+B.w/2-VW/2)/(VW/2-B.w/2-8),-1,1));}}
+  if(B.mode!='dead'&&B.y+B.h>600){B.y=600-B.h;if(B.vy>0)B.vy=0;}
   for(const sh of shots){sh.x+=sh.vx*dt;sh.y+=sh.vy*dt;sh.a+=dt*12;
     if(B.hp>0&&sh.x>B.x&&sh.x<B.x+B.w&&sh.y>B.y&&sh.y<B.y+B.h){sh.hit=1;hitBoss(1);}}
   shots=shots.filter(s=>!s.hit&&s.x>-20&&s.x<VW+20&&s.y>-20&&s.y<VH+20);
@@ -589,6 +591,15 @@ function bossPickups(dt){
   const p=arena[1+Math.floor(Math.random()*(arena.length-1))];
   items.push({x:p.x+rnd(20,p.w-20),y:p.y-24,type:'pw',k:randPw(),seg:'boss'});
 }
+/* ---------- S.C.'s briefcase throws money around whenever you attack ---------- */
+let cash=[];
+function caseCash(n){if(!pet||petEq!='sc'||pet.caseX===undefined)return;pet.lid=.35;
+  for(let i=0;i<n;i++)cash.push({x:pet.caseX,y:pet.caseY,vx:rnd(-70,70)+pet.caseF*rnd(30,110),vy:rnd(-260,-120),t:rnd(.8,1.3),r:rnd(0,6),vr:rnd(-9,9),coin:Math.random()<.35});}
+function updateCash(dt){if(pet&&pet.lid>0)pet.lid-=dt;for(const m of cash){m.vy+=650*dt;m.vx*=1-dt*1.5;m.x+=m.vx*dt;m.y+=m.vy*dt;m.r+=m.vr*dt;m.t-=dt;}cash=cash.filter(m=>m.t>0);}
+function drawCash(){for(const m of cash){ctx.save();ctx.globalAlpha=Math.min(1,m.t*2);ctx.translate(m.x,m.y);ctx.rotate(m.r);
+  if(m.coin){ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.ellipse(0,0,2.6*Math.abs(Math.cos(m.r*2))+.6,2.6,0,0,7);ctx.fill();}
+  else{ctx.fillStyle='#3ddc84';ctx.fillRect(-4.5,-2.5,9,5);ctx.strokeStyle='#11845b';ctx.lineWidth=.8;ctx.strokeRect(-4.5,-2.5,9,5);ctx.fillStyle='#11845b';ctx.font='bold 4px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('$',0,.3);}
+  ctx.restore();}ctx.globalAlpha=1;}
 function petShoot(x,y,home,dmg,col){const dx=B.x+B.w/2-x,dy=B.y+B.h/2-y,d=Math.hypot(dx,dy)||1;
   pshots.push({x,y,vx:dx/d*430,vy:dy/d*430,home,dmg,c:col,a:0});}
 function petBoss(dt){
@@ -697,6 +708,7 @@ function drawWorld(now){
   drawTrail();
   petDraw(ctx,now);
   if(!(inv>0&&Math.floor(now/90)%2))boxy(ctx,P,skin(),now,true);
+  drawCash();
   for(const q of parts){ctx.fillStyle=q.c;ctx.fillRect(q.x,q.y,5,3);}
   drawPopups();
   ctx.restore();
@@ -813,8 +825,9 @@ function petDraw(c,now){
   if(pet.zap>0){c.strokeStyle=`rgba(61,220,132,${pet.zap*2.4})`;c.lineWidth=3;c.beginPath();c.arc(x,y+6,26+(.35-pet.zap)*120,0,7);c.stroke();}
   if(a&&a.k=='wings'){c.fillStyle='rgba(159,232,255,.9)';const fl=Math.sin(now/60)*4;c.beginPath();c.ellipse(x-9,y+4+fl,8,4,-.6,0,7);c.ellipse(x+9,y+4+fl,8,4,.6,0,7);c.fill();}
   if(a&&a.k=='rocket'){c.fillStyle='#ffa53d';const fh=6+Math.random()*8;c.beginPath();c.moveTo(x-4,y+22);c.lineTo(x,y+22+fh);c.lineTo(x+4,y+22);c.fill();}
+  const holdC=!(pet.air||flying);pet.caseX=x+f*14;pet.caseY=y+(holdC?14:2);pet.caseF=f;
   c.save();c.translate(x,y);c.scale(f,1);
-  petFigure(c,petCfg(),{air:pet.air||flying,moving:pet.moving,walk:pet.walk,blink:pet.blink>0,ground:!pet.air&&!flying},now);
+  petFigure(c,petCfg(),{air:pet.air||flying,moving:pet.moving,walk:pet.walk,blink:pet.blink>0,ground:!pet.air&&!flying,lid:pet.lid>0},now);
   c.restore();
 }
 /* ---------- sidekick designs (all original, made-up politics characters) ---------- */
@@ -863,7 +876,8 @@ function petFigure(c,k,st,now){
   if(hold){c.moveTo(6,5);c.lineTo(9,10);}else{c.moveTo(6,5);c.lineTo(9,-1+wave);}c.stroke();
   c.fillStyle=k.skin;c.beginPath();c.arc(-8,12,1.5,0,7);if(hold)c.arc(9,11,1.5,0,7);else c.arc(9,-2+wave,1.5,0,7);c.fill();
   if(k.item){const ix=9,iy=hold?11:-2+wave;c.save();c.translate(ix,iy);
-    if(k.item=='briefcase'){const bw=k.caseTxt?14:8;c.fillStyle='#3a2a1c';rr(c,-3,1,bw,k.caseTxt?7:6,1);c.fill();c.fillStyle='#ffd23f';c.fillRect(-3+bw/2-1,0,2,1.5);
+    if(k.item=='briefcase'){const bw=k.caseTxt?14:8;
+      if(st.lid){c.save();c.translate(-3,1);c.rotate(-.9);c.fillStyle='#2a1d12';rr(c,0,-2.5,bw,2.5,1);c.fill();c.restore();c.fillStyle='#3ddc84';c.fillRect(-2,.2,bw-2,1.4);}c.fillStyle='#3a2a1c';rr(c,-3,1,bw,k.caseTxt?7:6,1);c.fill();c.fillStyle='#ffd23f';c.fillRect(-3+bw/2-1,0,2,1.5);
       if(k.caseTxt){const sg=c.getTransform().a<0?-1:1;c.save();c.scale(sg,1);c.fillStyle='#ffd23f';c.font='bold 3.6px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(k.caseTxt,sg*(-3+bw/2),4.6);c.restore();}}
     else if(k.item=='megaphone'){c.fillStyle='#ffd23f';c.beginPath();c.moveTo(-1,-1.5);c.lineTo(6,-4.5);c.lineTo(6,3.5);c.lineTo(-1,1.5);c.closePath();c.fill();c.fillStyle='#ae1c28';c.fillRect(5.5,-4.5,1.5,8);
       if(Math.floor(now/400)%2){c.strokeStyle='rgba(255,255,255,.8)';c.lineWidth=1;c.beginPath();c.arc(8,-.5,3,-.7,.7);c.arc(8,-.5,6,-.7,.7);c.stroke();}}
@@ -997,6 +1011,7 @@ function drawBoss(now){
   drawTrail();
   petDraw(ctx,now);
   if(!(inv>0&&Math.floor(now/90)%2))boxy(ctx,P,skin(),now,true);
+  drawCash();
   for(const q of parts){ctx.fillStyle=q.c;ctx.fillRect(q.x,q.y,5,3);}
   drawPopups();
   if(B){ctx.fillStyle='rgba(11,16,38,.75)';ctx.fillRect(10,10,VW-20,30);
