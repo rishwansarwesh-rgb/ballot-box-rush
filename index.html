@@ -95,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 19 · BOSS FIX</div>
+    <div class="ver">VERSION 20 · SPIKES & ICE</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -131,6 +131,7 @@ const PW={wings:{n:'WINGS',d:15,c:'#9fe8ff'},rocket:{n:'ROCKET',d:2.6,c:'#ff4d5e
 const PWK=Object.keys(PW),randPw=()=>PWK[Math.floor(Math.random()*PWK.length)];
 const ARROW={up:'↑',down:'↓',left:'←',right:'→'};
 const LIVES=3;let lives=LIVES,petPw={},pshots=[];
+let spikes=[];
 let P,plats,items,foes,climbs,letters,segs,cur,camX,camY,votes,dollars,state='menu',pausedFrom=null,last=0,popups,parts,trail,clouds,stars,pet=null;
 let jumpHeld=false,coyote=0,buffer=0,inv=0,pw={},airJumps=0,rally=0,rallyT=0,shake=0,climb=null,climbCD=0,dropT=0,warnT=0;
 let bossCount=0,B,arena,saved,shots,bshots,waves,fireCD=0,reviveReady=false,lastScene='world',run;
@@ -204,7 +205,7 @@ function setMuted(m){muted=m;store.set('muted',m);if(master)master.gain.value=m?
 function init(){
   votes=0;dollars=0;popups=[];parts=[];trail=[];pw={};rally=0;rallyT=0;bossCount=0;cur=0;inv=0;climb=null;dropT=0;reviveReady=false;
   run={ballots:0,zone:1,bosses:0,stomps:0,cash:0,climbs:0};
-  plats=[];items=[];foes=[];climbs=[];letters=[];segs=[];
+  plats=[];items=[];foes=[];climbs=[];letters=[];segs=[];spikes=[];
   const ground={x:0,y:600,w:VW,kind:'ground',seg:-1};plats.push(ground);
   segs.start={ex:0,ey:600,end:ground,type:'start',idx:-1};
   genSeg('up');genSeg();genSeg();
@@ -239,6 +240,7 @@ function pickKind(t,diff,prevSpecial){
   else if(t=='up'){if(r<.09+diff*.12)k='move';else if(r<.17+diff*.2)k='crumble';else if(r<.24+diff*.2)k='bounce';}
   else{if(r<.12)k='crumble';else if(r<.19)k='bounce';}
   if(prevSpecial&&(k=='crumble'||k=='bounce'))k='normal';
+  if(k=='normal'&&diff>=.5){const r2=Math.random();if(r2<.06+diff*.1)k='ice';else if(r2<.11+diff*.16)k='sticky';} // from zone 7 on
   return k;
 }
 function build(t,prev,idx,par){
@@ -274,7 +276,7 @@ function build(t,prev,idx,par){
     const lim=t=='up'?ay-par.H:ay+par.H;
     while(true){
       let gap=t=='up'?rnd(55,100+diff*18):rnd(90,135);
-      const climbPiece=lastP&&count>2&&Math.random()<.15;
+      const climbPiece=t=='up'&&lastP&&count>2&&Math.random()<.15;
       if(climbPiece)gap=t=='up'?rnd(190,240):rnd(210,260);
       const ny=t=='up'?y-gap:y+gap;if(t=='up'?ny<lim:ny>lim)break;y=ny;
       const w=Math.random()<.15?rnd(50,64):rnd(72,145-diff*35);
@@ -298,6 +300,12 @@ function build(t,prev,idx,par){
       if(kind!='bounce'&&!portal(x+w/2,y))loot(x+w/2,y);
       if(Math.random()<.3)addI({x:clamp(x+w/2+rnd(-60,60),L+20,R-20),y:y+(t=='up'?gap/2:-gap/2)-10,type:Math.random()<.7?'ballot':'coin'});
       enemies(p,kind);
+      if(t=='down'&&count>1){ // spikes to dodge on the way down
+        const busy=items.some(i=>i.seg==idx&&i.type=='portal'&&Math.abs(i.y+34-p.y)<4&&i.x>p.x&&i.x<p.x+p.w)||foes.some(f=>f.p==p);
+        if(!busy&&p.w>78&&kind!='move'&&Math.random()<.45+diff*.25){const sw=Math.min(p.w*.45,rnd(28,52)),left=Math.random()<.5;
+          spikes.push({x:left?p.x:p.x+p.w-sw,y:p.y,w:sw,dir:'up',p,seg:idx});}
+        if(Math.random()<.35+diff*.3){const sy=y+rnd(25,gap-35)*(1),left=Math.random()<.5,len=rnd(16,26),h=rnd(36,70);
+          spikes.push({x:left?L:R-len,y:sy-gap,w:len,h,dir:left?'right':'left',seg:idx});}}
       if(t=='up'&&idx>=1&&Math.random()<.05+diff*.07)flyer(ax+VW/2,y-gap/2,VW/2-50);
     }
     const ey=t=='up'?y-rnd(60,90):y+rnd(110,140);
@@ -356,8 +364,10 @@ function physics(dt,list,bounds,seg){
     else if(P.y+P.h>c.y1+6){climb=null;climbCD=.3;}
     if(climb){P.walk+=dt*8;return oldBottom;}
   }
-  const tv=ax*SPD;P.vx+=(tv-P.vx)*Math.min(1,dt*(P.on?18:10));if(Math.abs(P.vx)<4&&!axs)P.vx=0;if(axs)P.face=axs;
-  const jv=JV*(pw.spring?1.3:1);
+  const surf=P.on?P.on.kind:null;if(P.on)P.surf=surf;
+  if(surf=='ice'||surf=='sticky'){const key=surf+'Hint';if(!run[key]){run[key]=1;pop(P.x+14,P.y-14,surf=='ice'?'SLIPPERY!':'STICKY!');}}
+  const tv=ax*SPD*(surf=='sticky'?.42:1);P.vx+=(tv-P.vx)*Math.min(1,dt*(surf=='ice'?1.8:P.on?18:10));if(Math.abs(P.vx)<4&&!axs&&surf!='ice')P.vx=0;if(axs)P.face=axs;
+  const jv=JV*(pw.spring?1.3:1)*(P.surf=='sticky'&&coyote>0?.78:1);
   if(buffer>0&&coyote>0){P.vy=jv;coyote=0;buffer=0;P.on=null;airJumps=pw.wings?1:0;sfx('jump');}
   else if(pressed&&pw.wings&&airJumps>0&&!P.on){P.vy=jv*.9;airJumps--;buffer=0;sfx('jump');}
   let flyH=false;
@@ -381,7 +391,7 @@ function physics(dt,list,bounds,seg){
     if(P.x+P.w>p.x-6&&P.x<p.x+p.w+6&&ob<=p.y+4&&P.y+P.h>=p.y){
       P.y=p.y-P.h;
       if(p.kind=='bounce'){P.vy=-1180;p.boing=.45;pop(P.x+14,P.y,'BOING!');sfx('boing');break;}
-      P.vy=0;P.on=p;coyote=.14;if(p.kind=='crumble'&&!p.fall)p.fall=.001;break;}
+      P.vy=0;P.on=p;P.surf=p.kind;coyote=.14;if(p.kind=='crumble'&&!p.fall)p.fall=.001;break;}
   }
   if(P.on)P.walk+=Math.abs(P.vx)*dt*.05;
   return ob;
@@ -430,6 +440,7 @@ function update(dt){
   const oldBottom=physics(dt,plats,bounds,s);
   collect(dt);if(state!='play')return;
   updateFoes(dt,oldBottom);if(state!='play')return;
+  spikeHits();if(state!='play')return;
   updateLetters(dt);if(state!='play')return;
   // camera per direction
   const k=Math.min(1,dt*6);
@@ -444,7 +455,7 @@ function update(dt){
     camX+=(clamp(P.x+14-VW*.5,x0,x1-VW)-camX)*k;
     camY+=(clamp(P.y-VH*.55,s.ay-VH*.72,s.ay-VH*.5)-camY)*Math.min(1,dt*4);}
   while(segs.length<cur+3)genSeg();
-  plats=plats.filter(p=>p.seg>=cur-1);items=items.filter(i=>!i.got&&(i.seg>=cur-1));foes=foes.filter(f=>f.seg>=cur-1&&f.dead<.5);climbs=climbs.filter(c=>c.seg>=cur-1);
+  plats=plats.filter(p=>p.seg>=cur-1);items=items.filter(i=>!i.got&&(i.seg>=cur-1));foes=foes.filter(f=>f.seg>=cur-1&&f.dead<.5);climbs=climbs.filter(c=>c.seg>=cur-1);spikes=spikes.filter(k=>k.seg>=cur-1);
   if(climb&&!climbs.includes(climb))climb=null;
   if(P.y>camY+VH+40)hurt(true);
   checkChallenges();
@@ -640,6 +651,20 @@ function petBoss(dt){
   pshots=pshots.filter(s=>!s.hit&&s.x>-30&&s.x<VW+30&&s.y>-60&&s.y<VH+30);
 }
 
+/* ---------- spikes (down zones) ---------- */
+function spikeBox(k){
+  if(k.dir=='up'){const py=k.p?k.p.y:k.y,px=k.p?k.x+(k.p.x-(k.px0??(k.px0=k.p.x))):k.x;return{x:px+2,y:py-9,w:k.w-4,h:9};}
+  return{x:k.x,y:k.y,w:k.w,h:k.h};}
+function spikeHits(){if(inv>0||rallyT>0||pw.rocket)return;
+  for(const k of spikes){if(k.p&&k.p.fall>.45)continue;const b=spikeBox(k);
+    if(P.x+P.w-5>b.x&&P.x+5<b.x+b.w&&P.y+P.h-2>b.y&&P.y+6<b.y+b.h){pop(P.x+14,P.y-10,'OUCH!');P.vy=-420;shake=.2;hurt();if(state!='play')return;inv=Math.max(inv,1);return;}}}
+function spikeDraw(k){const b=spikeBox(k);ctx.fillStyle='#c0c7d6';ctx.strokeStyle='#5a6270';ctx.lineWidth=1;
+  if(k.dir=='up'){const n=Math.max(2,Math.round(b.w/9)),sw=b.w/n;ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(b.x+i*sw,b.y+b.h);ctx.lineTo(b.x+i*sw+sw/2,b.y);ctx.lineTo(b.x+(i+1)*sw,b.y+b.h);}ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff4d5e';for(let i=0;i<n;i++)ctx.fillRect(b.x+i*sw+sw/2-1,b.y,2,2);}
+  else{const n=Math.max(2,Math.round(b.h/10)),sh=b.h/n,base=k.dir=='right'?b.x:b.x+b.w,tip=k.dir=='right'?b.x+b.w:b.x;
+    ctx.fillStyle='#5a6270';ctx.fillRect(k.dir=='right'?b.x-2:b.x+b.w-2,b.y,4,b.h);ctx.fillStyle='#c0c7d6';
+    ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(base,b.y+i*sh);ctx.lineTo(tip,b.y+i*sh+sh/2);ctx.lineTo(base,b.y+(i+1)*sh);}ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff4d5e';for(let i=0;i<n;i++)ctx.fillRect(tip-(k.dir=='right'?2:0),b.y+i*sh+sh/2-1,2,2);}}
 /* ---------- drawing ---------- */
 function lerp(a,b,t){return a+(b-a)*t}
 function rgb(c){return `rgb(${c.map(Math.round).join(',')})`}
@@ -702,6 +727,7 @@ function drawWorld(now){
   drawWalls();
   for(const c of climbs)if(c.y1>camY-20&&c.y0<camY+VH+20)drawClimb(c,now);
   for(const p of plats)if(p.x<camX+VW+20&&p.x+p.w>camX-20&&p.y>camY-80&&p.y<camY+VH+40)platform(p,now);
+  for(const k of spikes)if(k.y>camY-90&&k.y<camY+VH+90)spikeDraw(k);
   for(const it of items)if(it.y>camY-40&&it.y<camY+VH+40)item(it,now);
   for(const f of foes)foeDraw(f,now);
   for(const l of letters)letterDraw(l,now);
@@ -746,6 +772,12 @@ function platform(p,now){
   const x=p.x+(p.kind=='crumble'&&p.fall>0&&p.fall<.45?Math.sin(now/20)*2:0);
   let y=p.y;
   if(p.kind=='bounce'&&p.boing){const k=1-p.boing/.45;y+=Math.sin(k*Math.PI*3)*(1-k)*9;}
+  if(p.kind=='ice'){ctx.fillStyle='#bfefff';rr(ctx,x,y,p.w,14,4);ctx.fill();ctx.fillStyle='#e9fbff';ctx.fillRect(x+4,y+2,p.w-8,3);
+    ctx.fillStyle='rgba(255,255,255,.8)';for(let i=12;i<p.w-6;i+=26)ctx.fillRect(x+i,y+7,8,1.5);
+    ctx.fillStyle='#9fe8ff';for(let i=8;i<p.w-6;i+=18)ctx.beginPath(),ctx.moveTo(x+i,y+14),ctx.lineTo(x+i+3,y+14),ctx.lineTo(x+i+1.5,y+19),ctx.fill();return;}
+  if(p.kind=='sticky'){ctx.fillStyle='#5f8f2a';rr(ctx,x,y,p.w,14,4);ctx.fill();ctx.fillStyle='#8fd14f';rr(ctx,x,y-2,p.w,6,3);ctx.fill();
+    ctx.fillStyle='#8fd14f';for(let i=10;i<p.w-6;i+=22){const d=3+Math.sin(now/400+i)*2;ctx.beginPath();ctx.ellipse(x+i,y+14+d/2,2,d,0,0,7);ctx.fill();}
+    ctx.fillStyle='rgba(255,255,255,.35)';for(let i=6;i<p.w-6;i+=30)ctx.beginPath(),ctx.arc(x+i,y+1,1.5,0,7),ctx.fill();return;}
   ctx.fillStyle=p.kind=='crumble'?'#9a7b5a':'#7a4f2a';rr(ctx,x,y,p.w,14,4);ctx.fill();
   const s=p.w/3;ctx.fillStyle='#ae1c28';ctx.fillRect(x+2,y+2,s,4);ctx.fillStyle='#fff';ctx.fillRect(x+2+s,y+2,s-4,4);ctx.fillStyle='#21468b';ctx.fillRect(x+2*s-2,y+2,s,4);
   if(p.kind=='crumble'){ctx.strokeStyle='#3a2a1c';ctx.lineWidth=1.5;ctx.beginPath();
