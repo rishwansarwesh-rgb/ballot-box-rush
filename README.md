@@ -10,11 +10,11 @@ Open `index.html` in a browser. Everything is in that one file.
 - **Keyboard:** arrow keys or WASD, Space to jump, F to fire, R for rally/veto, P or Esc to pause.
 
 ## Features
-- Zones in every direction, with ladders, ropes, springs, crumbling and moving stages
+- Zones in every direction, with ladders, ropes, bouncy platforms, crumbling and moving stages
 - Enemies: lobbyists, flying lobbyists and hecklers that throw NO-vote letters
 - Portals to Mega Lobbyist boss fights with a rage phase
 - Power-ups, rally meter, one revive per boss win
-- A tiny sidekick (blond quiff, blue suit) who floats along beside Boxy
+- A tiny sidekick (blond quiff, blue suit) who walks and jumps along behind Boxy
 - Skin shop with trail effects, daily challenges, best scores, sound and music
 
 Progress (wallet, skins, records) is saved in your browser only.
