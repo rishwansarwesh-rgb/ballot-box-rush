@@ -93,7 +93,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 10 · S.C.</div>
+    <div class="ver">VERSION 11 · S.C. PAYS</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -816,7 +816,7 @@ const PETS=[
   {id:'speaker',name:'The Speaker',price:900,desc:'Robe and gavel',skin:'#f1c7a0',suit:'#111522',lapel:'#000',pants:'#111522',tie:'#fff',robe:true,hair:'wig',hairC:'#f4f1ff',item:'gavel'},
   {id:'campaign',name:'Campaign Boss',price:1300,desc:'Red blazer, clipboard',skin:'#f6d2b6',suit:'#d2343f',lapel:'#a3202d',pants:'#23252f',tie:null,hair:'bob',hairC:'#b5502a',item:'clipboard'},
   {id:'robocand',name:'Robo Candidate',price:2000,desc:'Runs on promises',skin:'#a9b4c2',suit:'#6c7a89',lapel:'#4a5563',pants:'#4a5563',tie:'#3de0e0',hair:'antenna',hairC:'#ff4d5e',robot:true,item:'flag'},
-  {id:'sc',name:'S.C.',price:750,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#15161c',lapel:'#000',pants:'#15161c',tie:'#15161c',hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
+  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#15161c',lapel:'#000',pants:'#15161c',tie:'#15161c',hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
   {id:'ghost',name:'Floating Voter',price:3000,desc:'Never picks a side',skin:'#dfe7ff',suit:'#dfe7ff',lapel:'#b9c4e8',pants:null,tie:null,hair:'none',ghost:true}
 ];
 let petOwned=store.get('petOwned',['quiff']),petEq=store.get('petEq','quiff');
@@ -1014,8 +1014,8 @@ function renderShop(){
     const b=document.createElement('button');
     if(k.id==petEq){b.textContent='EQUIPPED';b.disabled=true;}
     else if(petOwned.includes(k.id)){b.textContent='EQUIP';b.className='alt';b.onclick=()=>{petEq=k.id;store.set('petEq',petEq);renderShop();};}
-    else{b.textContent='BUY $'+k.price;b.disabled=wallet<k.price;
-      b.onclick=()=>{if(wallet<k.price)return;wallet-=k.price;petOwned.push(k.id);petEq=k.id;sfx('win');
+    else{b.textContent=k.price<0?'GET +$'+(-k.price):'BUY $'+k.price;b.disabled=wallet<k.price; // negative price: he pays YOU, once
+      b.onclick=()=>{if(wallet<k.price||petOwned.includes(k.id))return;wallet-=k.price;petOwned.push(k.id);petEq=k.id;sfx('win');
         store.set('wallet',wallet);store.set('petOwned',petOwned);store.set('petEq',petEq);renderShop();};}
     card.append(pc,n,fx,b);pg.append(card);
   }
