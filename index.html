@@ -95,7 +95,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
     </div>
     <div class="daily" id="daily"></div>
     <div class="wallet" id="wallet1"></div>
-    <div class="ver">VERSION 17 · S.C. CLEAN FADE</div>
+    <div class="ver">VERSION 18 · S.C. SHOES</div>
     <div class="row" id="ovButtons"></div>
   </div>
   <div class="overlay shop" id="shop" hidden>
@@ -826,7 +826,7 @@ const PETS=[
   {id:'speaker',name:'The Speaker',price:900,desc:'Robe and gavel',skin:'#f1c7a0',suit:'#111522',lapel:'#000',pants:'#111522',tie:'#fff',robe:true,hair:'wig',hairC:'#f4f1ff',item:'gavel'},
   {id:'campaign',name:'Campaign Boss',price:1300,desc:'Red blazer, clipboard',skin:'#f6d2b6',suit:'#d2343f',lapel:'#a3202d',pants:'#23252f',tie:null,hair:'bob',hairC:'#b5502a',item:'clipboard'},
   {id:'robocand',name:'Robo Candidate',price:2000,desc:'Runs on promises',skin:'#a9b4c2',suit:'#6c7a89',lapel:'#4a5563',pants:'#4a5563',tie:'#3de0e0',hair:'antenna',hairC:'#ff4d5e',robot:true,item:'flag'},
-  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#4b4f5a',lapel:'#33363e',pants:'#3f434d',tie:'#d2232f',pinstripe:'#8e939f',twoEyes:true,hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
+  {id:'sc',name:'S.C.',price:-1000,desc:'Belastingontwijker',skin:'#c48a5e',suit:'#4b4f5a',lapel:'#33363e',pants:'#3f434d',tie:'#d2232f',pinstripe:'#8e939f',twoEyes:true,eyeWhite:true,shoes:'pointy',shoeC:'#7a4522',hair:'fade',hairC:'#141414',beard:true,glasses:true,item:'briefcase',caseTxt:'S.C'},
   {id:'ghost',name:'Floating Voter',price:3000,desc:'Never picks a side',skin:'#dfe7ff',suit:'#dfe7ff',lapel:'#b9c4e8',pants:null,tie:null,hair:'none',ghost:true}
 ];
 let petOwned=store.get('petOwned',['quiff']),petEq=store.get('petEq','quiff');
@@ -839,7 +839,11 @@ function petFigure(c,k,st,now){
   if(k.ghost){c.fillStyle=k.suit;c.beginPath();c.moveTo(-6,8);c.lineTo(-6,19);
     for(let i=0;i<4;i++){const xx=-6+i*4+2,wv=Math.sin(now/120+i)*1.5;c.quadraticCurveTo(xx-1,22+wv,xx+2,19);}c.lineTo(6,8);c.fill();}
   else{c.fillStyle=k.pants;c.fillRect(-4,14,3,6+Math.max(0,l)+(air?0:1));c.fillRect(1,14,3,6+Math.max(0,-l)+(air?-2:1));
-    c.fillStyle='#0b1026';c.fillRect(-5,20+Math.max(0,l)+(air?-1:0),5,2);c.fillRect(1,20+Math.max(0,-l)+(air?-3:0),5,2);}
+    const y1=20+Math.max(0,l)+(air?-1:0),y2=20+Math.max(0,-l)+(air?-3:0);
+    if(k.shoes=='pointy'){ // slim brown pointed shoes
+      for(const [sx,sy] of [[-4.6,y1],[1.4,y2]]){c.fillStyle=k.shoeC;c.beginPath();c.moveTo(sx,sy);c.lineTo(sx+3.4,sy);c.quadraticCurveTo(sx+5.4,sy+.6,sx+6.6,sy+1.6);c.lineTo(sx,sy+1.6);c.closePath();c.fill();
+        c.fillStyle='rgba(255,255,255,.25)';c.fillRect(sx+.6,sy+.25,2.2,.4);c.fillStyle='#3a2210';c.fillRect(sx,sy+1.3,1.4,.4);}}
+    else{c.fillStyle='#0b1026';c.fillRect(-5,y1,5,2);c.fillRect(1,y2,5,2);}}
   // body
   c.fillStyle=k.suit;
   if(k.robe){c.beginPath();c.moveTo(-6,2);c.lineTo(6,2);c.lineTo(8,18);c.lineTo(-8,18);c.closePath();c.fill();}
@@ -871,7 +875,9 @@ function petFigure(c,k,st,now){
   c.fillStyle=k.skin;if(k.robot){rr(c,-5.5,-10,11,11,2);c.fill();}else{c.beginPath();c.arc(0,-4,5.5,0,7);c.fill();}
   // face
   if(k.robot){c.fillStyle='#0b1026';c.fillRect(-4,-7,8,3.5);c.fillStyle='#3de0e0';c.fillRect(st.blink?0:1,-6.5,st.blink?3:2,2.5);c.fillStyle='#0b1026';c.fillRect(-1,-2,5,1);}
-  else if(k.twoEyes){c.fillStyle='#0b1026';for(const ex of [-1.6,2.4]){if(st.blink)c.fillRect(ex-.9,-5,1.9,.8);else c.fillRect(ex-.7,-6,1.5,2);}
+  else if(k.twoEyes){for(const ex of [-1.6,2.4]){if(k.eyeWhite&&!st.blink){c.fillStyle='#fff';c.beginPath();c.ellipse(ex,-5,1.3,1.1,0,0,7);c.fill();c.fillStyle='#0b1026';c.beginPath();c.arc(ex+.35,-4.9,.65,0,7);c.fill();}
+      else{c.fillStyle='#0b1026';if(st.blink)c.fillRect(ex-.9,-5,1.9,.8);else c.fillRect(ex-.7,-6,1.5,2);}}
+    c.fillStyle='#0b1026';
     if(!k.beard){c.strokeStyle='#0b1026';c.lineWidth=.9;c.beginPath();c.arc(.4,-2.5,1.8,.2,Math.PI-.2);c.stroke();}}
   else{c.fillStyle='#0b1026';if(st.blink)c.fillRect(1,-5,2.5,.8);else c.fillRect(1.5,-6,1.6,2);
     c.strokeStyle='#0b1026';c.lineWidth=.9;c.beginPath();if(k.ghost)c.arc(2,-1.5,1.2,0,7);else c.arc(1.5,-2.5,1.8,.2,1.6);c.stroke();}
