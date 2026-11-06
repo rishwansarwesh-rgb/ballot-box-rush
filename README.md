@@ -14,6 +14,7 @@ Open `index.html` in a browser. Everything is in that one file.
 - Enemies: lobbyists, flying lobbyists and hecklers that throw NO-vote letters
 - Portals to Mega Lobbyist boss fights with a rage phase
 - Power-ups, rally meter, one revive per boss win
+- A tiny sidekick (blond quiff, blue suit) who floats along beside Boxy
 - Skin shop with trail effects, daily challenges, best scores, sound and music
 
 Progress (wallet, skins, records) is saved in your browser only.
